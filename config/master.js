@@ -84,6 +84,17 @@ module.exports = {
 		meta: false,
 		errorStacks: false,
 		schemaEndpoints: true
+	},
+
+// --------------------------------------------------------
+
+	// 
+	// Security/authentication config
+	// 
+	auth: {
+		iterations: 10000,
+		tokenTTL: [2, 'hours'],
+		authMethods: [ 'password', 'email', 'twostep-email' ]
 	}
 
 };

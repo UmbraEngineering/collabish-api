@@ -1,7 +1,7 @@
 {
   "name": "collabish-api",
   "version": "0.0.0",
-  "description": "The Collabish API server",
+  "description": "The collabish REST API server app",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,6 +9,13 @@
   "author": "James Brumond <james@jbrumond.me> (http://www.jbrumond.me)",
   "license": "MIT",
   "dependencies": {
-    "dagger.js": "~1.0.23"
+    "dagger.js": "1.0.25",
+    "pkg": "0.0.1-1",
+    "promise-es6": "^0.1.0",
+    "multi-auth": "latest",
+    "jwt-simple": "^0.2.0",
+    "moment": "^2.8.3",
+    "nodemailer": "^1.3.0",
+    "handlebars": "^2.0.0"
   }
 }

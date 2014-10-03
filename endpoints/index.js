@@ -19,7 +19,7 @@ var IndexEndpoint = module.exports = new Endpoint({
 		req.respond(200, {
 			name: 'Collabish API',
 			version: VERSION,
-			authorization: (req.auth && User.serialize(req.auth.user)),
+			authorization: (req.auth.user && User.serialize(req.auth.user)),
 			endpoints: {
 				'/': {
 					'get': {

@@ -102,6 +102,50 @@ var UsersEndpoint = module.exports = new Endpoint({
 	},
 
 	// 
+	// PUT/PATCH /users
+	// 
+	"put|patch": function(req) {
+		var data;
+		var ignoreMissing = req.query.ignoreMissing;
+
+		req.auth
+			.allow(req.auth.isAdmin)
+			.then(function() {
+				if (! Array.isArray(req.body)) {
+					throw new HttpError(400, 'Request body must be an array');
+				}
+
+				var ids = [ ];
+				
+				data = req.body.reduce(function(memo, obj) {
+					var id = obj._id;
+					delete obj._id;
+					ids.push(id);
+					memo[id] = obj;
+
+					return memo;
+				});
+
+				return User.find({ _id: ids }).exec();
+			})
+			.then(function(users) {
+				if (! ignoreMissing && users.length < req.body.length) {
+					throw new HttpError(404, 'Could not find all documents to update; No action taken');
+				}
+
+				users.forEach(function(user) {
+					user.set(data[user._id.toString()]);
+				});
+
+				return when.saved(users);
+			})
+			.then(function() {
+				req.respond(200);
+			})
+			.catch(HttpError.catch(req));
+	},
+
+	// 
 	// PUT/PATCH /users/:id
 	// 
 	"put|patch /:id": function(req) {
@@ -138,6 +182,35 @@ var UsersEndpoint = module.exports = new Endpoint({
 	},
 
 	// 
+	// DELETE /users
+	// 
+	"delete": function(req) {
+		var ignoreMissing = req.query.ignoreMissing;
+
+		req.auth
+			.allow(req.auth.isAdmin)
+			.then(function() {
+				if (! Array.isArray(req.body)) {
+					throw new HttpError(400, 'Request body must be an array');
+				}
+
+				return User.find({ _id: req.body }).exec();
+			})
+			.then(function(users) {
+				if (! ignoreMissing && users.length < req.body.length) {
+					throw new HttpError(404, 'Could not find all documents to delete; No action taken');
+				}
+
+				users.forEach(function(user) {
+					user.remove();
+				});
+
+				req.respond(200);
+			})
+			.catch(HttpError.catch(req));
+	},
+
+	// 
 	// DELETE /users/:id
 	// 
 	"delete /:id": function(req) {
@@ -162,7 +235,6 @@ var UsersEndpoint = module.exports = new Endpoint({
 				}
 
 				doc.remove();
-
 				req.respond(200);
 			})
 			.catch(HttpError.catch(req));

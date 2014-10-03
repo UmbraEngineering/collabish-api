@@ -42,7 +42,12 @@ var IndexEndpoint = module.exports = new Endpoint({
 					'get': {
 						description: 'Queries for users in the database',
 						queryParams: {
-							// 
+							fields: 'A list of fields to fetch',
+							populate: 'A list of fields to be populated',
+							filter: 'A mongo query object',
+							sort: 'The field(s) to sort the results by',
+							offset: 'Number of documents to skip',
+							limit: 'Number of documents to return'
 						}
 					},
 					'get /:id': {
@@ -56,6 +61,19 @@ var IndexEndpoint = module.exports = new Endpoint({
 							authMethod: 'The auth method to select for the user',
 							password: 'The password to assign to the account, if one is needed'
 						}
+					},
+					'put|patch /:id': {
+						description: 'Edits a user',
+						body: {
+							username: 'A new username for the user',
+							email: 'A new email address for the user (will require confirmation)',
+							authMethod: 'Changes the authMethod for the user. If the method is \'password\' or ' +
+								'\'twostep-email\', a password value must be set',
+							password: 'A new password for the user (will require confirmation by email)'
+						}
+					},
+					'delete /:id': {
+						description: 'Permanantly deletes a user and all related documents'
 					}
 				}
 			}

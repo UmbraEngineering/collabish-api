@@ -92,7 +92,7 @@ module.exports = {
 	// Security/authentication config
 	// 
 	auth: {
-		iterations: 10000,
+		iterations: 25000,
 		tokenTTL: [2, 'hours'],
 		authMethods: [ 'password', 'email', 'twostep-email' ]
 	}

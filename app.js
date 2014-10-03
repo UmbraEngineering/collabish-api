@@ -11,7 +11,7 @@ require('dagger.js')({
 	],
 	
 	middleware: [
-		// 
+		require('./middleware/auth')
 	]
 
 });

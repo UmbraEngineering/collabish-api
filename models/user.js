@@ -1,8 +1,9 @@
 
-var crypto   = require('crypto');
-var conf     = require('dagger.js/lib/conf');
-var models   = require('dagger.js/lib/models');
-var Promise  = require('promise-es6').Promise;
+var crypto    = require('crypto');
+var conf      = require('dagger.js/lib/conf');
+var models    = require('dagger.js/lib/models');
+var Promise   = require('promise-es6').Promise;
+var validate  = require('mongoose-validator');
 
 
 // 
@@ -12,15 +13,45 @@ var Promise  = require('promise-es6').Promise;
 // as that is handled automatically by dagger's model module.
 // 
 var UserSchema = module.exports = new models.Schema({
-	username: { type: String },
-	email: { type: String },
-	phone: { type: String },
+	username: {
+		type: String,
+		required: true,
+		index: {unique: true},
+		validate:[
+			validate({
+				validator: 'matches',
+				arguments: /^[a-zA-Z0-9_\-]+$/,
+				message: 'Can only contain letters, numbers, hyphens (-) and underscores (_)'
+			}),
+			validate({
+				validator: 'isLength',
+				arguments: [1, 30],
+				message: 'Must be between 1 and 30 characters in length'
+			})
+		]
+	},
+	email: {
+		type: String,
+		required: true,
+		index: {unique: true},
+		validate: [
+			validate({
+				validator: 'isEmail',
+				message: 'Must be a valid email address'
+			})
+		]
+	},
 	password: {
-		hash: { type: String },
-		salt: { type: String },
+		hash: { type: Buffer },
+		salt: { type: Buffer },
 		iterations: { type: Number }
 	},
-	authMethod: { type: String, enum: [ 'password', 'email', 'twostep-email', 'twostep-sms' ] }
+	emailConfirmed: { type: Boolean, default: false },
+	authMethod: {
+		type: String,
+		required: true,
+		enum: [ 'password', 'email', 'twostep-email' ]
+	}
 });
 
 // 
@@ -35,15 +66,18 @@ var UserSchema = module.exports = new models.Schema({
 UserSchema.statics.hashPassword = function(password, salt, iterations) {
 	iterations = iterations || conf.auth.iterations || 10000;
 
+	var salt;
+
 	return getSalt()
-		.then(function(salt) {
+		.then(function(_salt) { salt = _salt })
+		.then(function() {
 			return doHash(password, salt, iterations);
 		})
 		.then(function(hash) {
 			return {
-				iterations: iterations,
-				salt: salt.toString('hex'),
-				hash: hash.toString('hex')
+				hash: hash,
+				salt: salt,
+				iterations: iterations
 			};
 		});
 
@@ -83,3 +117,52 @@ UserSchema.statics.hashPassword = function(password, salt, iterations) {
 		});
 	}
 };
+
+// 
+// Vaidate a plaintext password as being "secure" enough. If invalid,
+// returns a message string. Otherwise, returns undefined.
+// 
+// @param {password} the password
+// @return string
+// 
+UserSchema.statics.validatePassword = function(password) {
+	if (password.length < 8) {
+		return 'Password must be at least 8 characters long';
+	}
+};
+
+// 
+// Serializes a user object, readying it to be sent to the client
+// 
+// @param {obj} the user object
+// @return object
+// 
+UserSchema.statics.serialize = function(obj) {
+	if (obj.toObject) {
+		obj = obj.toObject();
+	}
+
+	// Never send down passwords
+	delete obj.password;
+
+	return obj;
+};
+
+// 
+// Updates the user's password
+// 
+// @param {password} the new password
+// @return promise
+// 
+UserSchema.methods.setPassword = function(password) {
+	var user = this;
+
+	return UserSchema.statics.hashPassword(password)
+		.then(function(password) {
+			user.password.hash = pass.hash;
+			user.password.salt = pass.salt;
+			user.password.iterations = pass.iterations;
+		});
+};
+
+

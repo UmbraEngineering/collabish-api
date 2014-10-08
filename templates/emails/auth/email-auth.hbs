@@ -1,0 +1,41 @@
+<table border="0" style="font-family: sans-serif; max-width: 800px;">
+	<tr>
+		<td>
+			<h1 style="font-size: 20px;">Collabish - Login Request</h1>
+		</td>
+	</tr>
+	<tr>
+		<td style="padding: 15px 0 50px; font-size: 14px;">
+			<p>
+				Hello <i>{{ user.name }}</i>,<br />
+				We recieved a request to log into your Collabish account.
+			</p>
+			<a
+				style="
+					display: inline-block;
+					margin: 20px 40px;
+					padding: 10px 40px;
+					background: #55c;
+					color: #fff;
+					text-decoration: none;
+					font-size: 20px;
+					text-shadow: -1px -1px 0 #000;
+					border-top: 2px #77e solid;
+					outline: 2px #33a solid;
+				"
+				href="http://www.collabish.me/auth/email-auth?token={{ token }}"
+			>Login</a>
+			<p>
+				You can also use this link if that works better for you: <a href="http://www.collabish.me/auth/email-auth?token={{ token }}">http://www.collabish.me/auth/email-auth?token={{ token }}</a>
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td style="padding-top: 10px; border-top: 1px #ccc solid; font-size: 12px;">
+			<p>
+				If you didn't request a login to your Collabish account, this could be a sign that
+				someone else is trying to access your account.
+			</p>
+		</td>
+	</tr>
+</table>

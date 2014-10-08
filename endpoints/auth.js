@@ -35,8 +35,40 @@ var AuthEndpoint = module.exports = new Endpoint({
 				(new HttpError(401, 'Authentication failed')).send(req);
 			})
 			.catch(function(err) {
-				(new HttpError(err)).send(req);
+				err = new HttpError(err);
+				err.status = 401;
+				err.send(req);
 			});
+	},
+
+	// 
+	// POST /auth/email-confirmation/:userId
+	// 
+	"put|patch /email-confirmation/:userId": function(req) {
+		auth.multiAuth.confirmEmailStepOne(req.params.userId)
+			.then(function() {
+				req.respond(202, {
+					message: 'Confirmation email sent'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// PUT/PATCH /auth/email-confirmation/:key
+	// 
+	"put|patch /email-confirmation/:key": function(req) {
+		auth.multiAuth.confirmEmailStepTwo(req.params.key)
+			.then(function() {
+				req.respond(200, {
+					message: 'Email confirmed'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
 	}
 	
 });

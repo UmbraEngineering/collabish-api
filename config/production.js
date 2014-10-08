@@ -8,6 +8,10 @@ module.exports = {
 	http: {
 		port: process.env.PORT
 	},
+
+	ws: {
+		store: 'memory'
+	},
 	
 	redis: {
 		enabled: false,

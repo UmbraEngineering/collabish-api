@@ -34,7 +34,7 @@ module.exports = {
 	// Web socket configuration
 	// 
 	ws: {
-		enabled: false,
+		enabled: true,
 
 		// Should socket-based push listeners be allowed
 		enablePushSupport: false,

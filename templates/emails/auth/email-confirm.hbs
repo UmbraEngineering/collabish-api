@@ -1,0 +1,23 @@
+<table border="0" style="font-family: sans-serif; max-width: 800px;">
+	<tr>
+		<td>
+			<h1 style="font-size: 20px;">Collabish - Email Confirmation</h1>
+		</td>
+	</tr>
+	<tr>
+		<td style="padding: 15px 0 50px; font-size: 14px;">
+			<p>
+				Hello <i>{{ user.name }}</i>,<br />
+				To confirm your email address and finish setting up your account, go to: <a href="http://www.collabish.me/auth/email-confirm?token={{ token }}">http://www.collabish.me/auth/email-confirm?token={{ token }}</a>
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td style="padding-top: 10px; border-top: 1px #ccc solid; font-size: 12px;">
+			<p>
+				If you didn't create this Collabish account and don't recognize this email, please
+				visit: <a href="http://www.collabish.me/auth/email-disavow?token={{ token }}">http://www.collabish.me/auth/email-disavow?token={{ token }}</a> to unlink the account
+			</p>
+		</td>
+	</tr>
+</table>

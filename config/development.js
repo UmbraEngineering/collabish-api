@@ -8,6 +8,10 @@ module.exports = {
 	http: {
 		port: 3000
 	},
+
+	ws: {
+		store: 'memory'
+	},
 	
 	redis: {
 		enabled: false,

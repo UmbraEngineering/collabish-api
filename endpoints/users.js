@@ -1,4 +1,5 @@
 
+var auth       = require('../lib/auth');
 var models     = require('dagger.js/lib/models');
 var Endpoint   = require('dagger.js/lib/endpoint');
 var HttpError  = require('dagger.js/lib/http-meta').HttpError;
@@ -35,6 +36,7 @@ var UsersEndpoint = module.exports = new Endpoint({
 
 						if (! req.auth.isAdmin && ! req.auth.is(doc._id)) {
 							delete doc.email;
+							delete doc.phone;
 							delete doc.emailConfirmed;
 							delete doc.authMethod;
 						}
@@ -72,6 +74,7 @@ var UsersEndpoint = module.exports = new Endpoint({
 					// any sensitive user data (excluding admins, who can see all data for anyone)
 					if (! req.auth.isAdmin && ! req.auth.is(doc._id)) {
 						delete doc.email;
+						delete doc.phone;
 						delete doc.emailConfirmed;
 						delete doc.authMethod;
 					}
@@ -83,9 +86,35 @@ var UsersEndpoint = module.exports = new Endpoint({
 	},
 
 	// 
+	// GET /users/exists/:name
+	// 
+	// Checks if a username/email is already taken; for use as a signup aid
+	// 
+	"get /exists/:name": function(req) {
+		var query = { };
+		if (req.params.name.indexOf('@') >= 0) {
+			query.email = req.params.name;
+		} else {
+			query.username = req.params.name;
+		}
+
+		User.findOne(query).exec()
+			.then(
+				function(user) {
+					req.respond(200, {
+						exists: !! user
+					});
+				},
+				HttpError.catch(req)
+			);
+	},
+
+	// 
 	// POST /users
 	// 
 	"post": function(req) {
+		var user;
+
 		req.auth
 			.allow(req.auth.isAdmin || ! req.auth.user)
 			.then(function() {
@@ -93,10 +122,18 @@ var UsersEndpoint = module.exports = new Endpoint({
 			})
 			.then(function(hash) {
 				req.body.password = hash;
+
+				// Make sure people cannot cheat and auto-confirm their email
+				delete req.body.emailConfirmed;
+
 				return User.create(req.body);
 			})
-			.then(function(doc) {
-				req.respond(201, User.serialize(doc));
+			.then(function(_user) { user = _user; })
+			.then(function() {
+				return auth.multiAuth.confirmEmailStepOne(user._id.toString());
+			})
+			.then(function() {
+				req.respond(201, User.serialize(user));
 			})
 			.catch(HttpError.catch(req));
 	},

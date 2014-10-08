@@ -41,6 +41,16 @@ var UserSchema = module.exports = new models.Schema({
 			})
 		]
 	},
+	phone: {
+		type: String,
+		validate: [
+			validate({
+				validator: 'matches',
+				arguments: /^\+1[0-9]{7,11}$/, ///^\+[1-9]{1}[0-9]{7,11}$/,
+				message: 'Must be a valid mobile phone number'
+			})
+		]
+	},
 	password: {
 		hash: { type: Buffer },
 		salt: { type: Buffer },

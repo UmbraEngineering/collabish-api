@@ -8,9 +8,9 @@ var AuthEndpoint = module.exports = new Endpoint({
 	route: '/auth',
 	
 	//
-	// POST /auth
+	// POST /auth/token
 	//
-	"post": function(req) {
+	"post /token": function(req) {
 		auth.multiAuth.startAuthentication(req.body)
 			.then(function(user) {
 				if (user && typeof user === 'object') {
@@ -42,9 +42,24 @@ var AuthEndpoint = module.exports = new Endpoint({
 	},
 
 	// 
+	// PUT/PATCH /token
+	// 
+	"put|patch /token": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				var token = auth.createToken(req.auth.user);
+				return req.respond(200, {
+					message: 'New token generated',
+					token: token
+				});
+			})
+			.catch(HttpError.catch(req));
+	},
+
+	// 
 	// POST /auth/email-confirmation/:userId
 	// 
-	"put|patch /email-confirmation/:userId": function(req) {
+	"post /email-confirmation/:userId": function(req) {
 		auth.multiAuth.confirmEmailStepOne(req.params.userId)
 			.then(function() {
 				req.respond(202, {

@@ -29,7 +29,8 @@ var DocumentSchema = module.exports = new models.Schema({
 	created: { type: Date, default: Date.now },
 	updated: { type: Date, default: Date.now },
 	collaborators: [{ type: ObjectId, ref: 'user' }],
-	mainRevision: { type: ObjectId, ref: 'revision' }
+	mainRevision: { type: ObjectId, ref: 'revision' },
+	adultContent: { type: Boolean, default: false }
 });
 
 // 

@@ -23,16 +23,11 @@ var AuthEndpoint = module.exports = new Endpoint({
 					});
 				}
 
-				if (user) {
-					// The first step in a two-step process was successful. Inform the
-					// client that they should attempt to move forward with authentication
-					return req.respond(202, {
-						message: 'Authentication message sent'
-					});
-				}
-
-				// Authentication has failed
-				(new HttpError(401, 'Authentication failed')).send(req);
+				// The first step in a two-step process was successful. Inform the
+				// client that they should attempt to move forward with authentication
+				return req.respond(202, {
+					message: 'Authentication message sent'
+				});
 			})
 			.catch(function(err) {
 				err = new HttpError(err);
@@ -54,6 +49,27 @@ var AuthEndpoint = module.exports = new Endpoint({
 				});
 			})
 			.catch(HttpError.catch(req));
+	},
+
+	// 
+	// POST /auth/twostep
+	// 
+	"post /twostep": function(req) {
+		auth.multiAuth.stepTwo(req.body.code)
+			.then(function(user) {
+				// Authentication was successful, use the user object to generate
+				// an auth token and send it to the client
+				var token = auth.createToken(user);
+				return req.respond(200, {
+					message: 'Authentication successful',
+					token: token
+				});
+			})
+			.catch(function(err) {
+				err = new HttpError(err);
+				err.status = 401;
+				err.send(req);
+			});
 	},
 
 	// 

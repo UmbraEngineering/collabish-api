@@ -24,13 +24,33 @@ var DocumentSchema = module.exports = new models.Schema({
 			})
 		]
 	},
+	description: {
+		type: String,
+		validate: [
+			validate({
+				validator: 'isLength',
+				arguments: [ 0, 200 ],
+				message: 'Cannot exceed 200 characters in length'
+			})
+		]
+	},
 	public: { type: Boolean, default: false },
 	owner: { type: ObjectId, ref: 'user' },
 	created: { type: Date, default: Date.now },
 	updated: { type: Date, default: Date.now },
 	collaborators: [{ type: ObjectId, ref: 'user' }],
 	mainRevision: { type: ObjectId, ref: 'revision' },
-	adultContent: { type: Boolean, default: false }
+	adultContent: { type: Boolean, default: false },
+	tags: [{ type: String }],
+	starred: { type: Number, default: 0 }
+});
+
+// 
+// Update the {updated} field anytime the model is changed
+// 
+DocumentSchema.pre('save', function(done) {
+	this.updated = Date.now();
+	done();
 });
 
 // 

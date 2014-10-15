@@ -5,8 +5,10 @@ var Endpoint   = require('dagger.js/lib/endpoint');
 var HttpError  = require('dagger.js/lib/http-meta').HttpError;
 var conf       = require('dagger.js/lib/conf');
 var when       = require('dagger.js/node_modules/when');
+var Promise    = require('promise-es6').Promise;
 
-var User = models.require('user').model;
+var User      = models.require('user').model;
+var Activity  = models.require('activity').model;
 
 var UsersEndpoint = module.exports = new Endpoint({
 
@@ -110,32 +112,140 @@ var UsersEndpoint = module.exports = new Endpoint({
 	},
 
 	// 
+	// GET /users/:id/activity
+	// 
+	"get /:id/activity": function(req) {
+		if (req.params.id === 'me' && req.auth.user) {
+			req.params.id = req.auth.user._id;
+		}
+
+		req.auth.allow(req.auth.isAdmin || req.auth.is(req.params.id))
+			.then(function() {
+				return Activity.findOne({ user: req.params.id }).exec();
+			})
+			.then(function(doc) {
+				if (! doc) {
+					throw new HttpError(404, 'Document not found');
+				}
+
+				req.respond(200, Activity.serialize(doc));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// PATCH /users/:id/activity
+	// 
+	"patch /:id/activity": function(req) {
+		if (req.params.id === 'me' && req.auth.user) {
+			req.params.id = req.auth.user._id;
+		}
+
+		var query = { user: req.params.id };
+
+		var starUpdate;
+		if (req.body.star) {
+			var starArray = Array.isArray(req.body.star) ? req.body.star : [req.body.star];
+			starUpdate = {
+				$addToSet: {
+					starred: {$each: starArray},
+					recentlyStarred: {
+						$each: starArray.map(function(doc) {
+							return {document: doc};
+						}),
+						$sort: {datetime: -1},
+						$slice: 5
+					}
+				}
+			};
+		}
+
+		var unstarUpdate;
+		if (req.body.unstar) {
+			unstarUpdate = {
+				$pull: {
+					starred: Array.isArray(req.body.unstar)
+						? { $each: req.body.unstar }
+						: req.body.unstar
+				}
+			};
+		}
+
+		req.auth.allow(req.auth.isAdmin || req.auth.is(req.params.id))
+			.then(function() {
+				if (! starUpdate) {
+					return Promise.resolve();
+				}
+
+				return new Promise(function(resolve, reject) {
+					Activity.update(query, starUpdate, function(err) {
+						if (err) {
+							return reject(err);
+						}
+
+						resolve();
+					});
+				});
+			})
+			.then(function() {
+				if (! unstarUpdate) {
+					return Promise.resolve();
+				}
+
+				return new Promise(function(resolve, reject) {
+					Activity.update(query, unstarUpdate, function(err) {
+						if (err) {
+							return reject(err);
+						}
+
+						resolve();
+					});
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
 	// POST /users
 	// 
 	"post": function(req) {
 		var user;
 
-		req.auth
-			.allow(req.auth.isAdmin || ! req.auth.user)
+		req.auth.allow(req.auth.isAdmin || ! req.auth.user)
 			.then(function() {
 				return User.hashPassword(req.body.password);
 			})
 			.then(function(hash) {
 				req.body.password = hash;
 
-				// Make sure people cannot cheat and auto-confirm their email
+				// Remove things that should not be able to be manually set
+				delete req.body.activity;
 				delete req.body.emailConfirmed;
 
 				return User.create(req.body);
 			})
 			.then(function(_user) { user = _user; })
 			.then(function() {
+				// Create the new user's activity log
+				return Activity.create({ user: user._id });
+			})
+			.then(function(activity) {
+				user.activity = activity;
+				return when.saved(user);
+			})
+			.then(function() {
 				return auth.multiAuth.confirmEmailStepOne(user._id.toString());
 			})
 			.then(function() {
 				req.respond(201, User.serialize(user));
 			})
-			.catch(HttpError.catch(req));
+			.catch(
+				HttpError.catch(req)
+			);
 	},
 
 	// 
@@ -179,7 +289,9 @@ var UsersEndpoint = module.exports = new Endpoint({
 			.then(function() {
 				req.respond(200);
 			})
-			.catch(HttpError.catch(req));
+			.catch(
+				HttpError.catch(req)
+			);
 	},
 
 	// 
@@ -214,7 +326,9 @@ var UsersEndpoint = module.exports = new Endpoint({
 			.then(function(doc) {
 				req.respond(200, User.serialize(doc));
 			})
-			.catch(HttpError.catch(req));
+			.catch(
+				HttpError.catch(req)
+			);
 
 	},
 
@@ -244,7 +358,9 @@ var UsersEndpoint = module.exports = new Endpoint({
 
 				req.respond(200);
 			})
-			.catch(HttpError.catch(req));
+			.catch(
+				HttpError.catch(req)
+			);
 	},
 
 	// 
@@ -274,7 +390,9 @@ var UsersEndpoint = module.exports = new Endpoint({
 				doc.remove();
 				req.respond(200);
 			})
-			.catch(HttpError.catch(req));
+			.catch(
+				HttpError.catch(req)
+			);
 	}
 
 });

@@ -5,6 +5,9 @@ var models    = require('dagger.js/lib/models');
 var Promise   = require('promise-es6').Promise;
 var validate  = require('mongoose-validator');
 
+var ObjectId  = models.types.ObjectId;
+
+models.require('activity');
 
 // 
 // Define the User schema
@@ -61,7 +64,8 @@ var UserSchema = module.exports = new models.Schema({
 		type: String,
 		required: true,
 		enum: [ 'password', 'email', 'twostep-email' ]
-	}
+	},
+	activity: { type: ObjectId, ref: 'activity' }
 });
 
 // 

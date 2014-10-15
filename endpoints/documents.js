@@ -30,7 +30,7 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			.then(function() {
 				return Document.findByQuery(req.query, function(query) {
 					if (! req.auth.isAdmin) {
-						query.$or([
+						query.or([
 							{owner: req.auth.user._id},
 							{collaborators: req.auth.user._id},
 							{public: true}
@@ -121,15 +121,20 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 	// POST /documents
 	// 
 	"post": function(req) {
-		// 
-		// NOTE: Authorization should be done here
-		// 
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				req.body.owner = req.auth.user._id;
 
-		Document.create(req.body)
-			.then(
-				function(doc) {
-					req.respond(201, Document.serialize(doc));
-				},
+				delete req.body.created;
+				delete req.body.updated;
+				delete req.body.mainRevision;
+
+				return Document.create(req.body);
+			})
+			.then(function(doc) {
+				req.respond(201, Document.serialize(doc));
+			})
+			.catch(
 				HttpError.catch(req)
 			);
 	},

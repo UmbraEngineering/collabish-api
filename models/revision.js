@@ -2,8 +2,9 @@
 var validate  = require('mongoose-validator');
 var models    = require('dagger.js/lib/models');
 
-var ObjectId = models.types.ObjectId;
+var ObjectId  = models.types.ObjectId;
 
+// var Document  = models.require('document').model;
 models.require('document');
 
 
@@ -37,5 +38,7 @@ var RevisionSchema = module.exports = new models.Schema({
 // 
 RevisionSchema.pre('save', function(done) {
 	this.updated = Date.now();
-	done();
+	Document.findByIdAndUpdate(this.document, {$set: {updated: Date.now()}}, function() {
+		done();
+	});
 });

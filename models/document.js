@@ -42,7 +42,10 @@ var DocumentSchema = module.exports = new models.Schema({
 	mainRevision: { type: ObjectId, ref: 'revision' },
 	adultContent: { type: Boolean, default: false },
 	tags: [{ type: String }],
-	starred: { type: Number, default: 0 }
+	starredBy: [{
+		user: { type: ObjectId, ref: 'user', index: {unique: true} },
+		datetime: { type: Date, default: Date.now }
+	}]
 });
 
 // 
@@ -93,6 +96,20 @@ DocumentSchema.methods.permissions = function(user) {
 	}
 
 	return null;
+};
+
+// 
+// Serialize a document for sending to the client
+// 
+DocumentSchema.statics.serialize = function(obj) {
+	if (obj.toObject) {
+		obj = obj.toObject();
+	}
+
+	// Replace the list of stars with a count
+	obj.starredBy = (obj.starredBy && obj.starredBy.length) || 0;
+
+	return obj;
 };
 
 

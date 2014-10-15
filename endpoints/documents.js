@@ -128,11 +128,60 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 				delete req.body.created;
 				delete req.body.updated;
 				delete req.body.mainRevision;
+				delete req.body.starredBy;
 
 				return Document.create(req.body);
 			})
 			.then(function(doc) {
 				req.respond(201, Document.serialize(doc));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// POST /documents/:id/star
+	// 
+	// Stars the document as the current user
+	// 
+	"post /:id/star": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				var query = {
+					_id: req.params.id,
+					'starredBy.user': {$ne: req.auth.user._id}
+				};
+				return Document.update(query, {
+					$push: {
+						starredBy: {user: req.auth.user._id}
+					}
+				});
+			})
+			.then(function() {
+				req.send(200, { message: 'success' });
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// POST /documents/:id/unstar
+	// 
+	// Unstars the document as the current user
+	// 
+	"post /:id/unstar": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return Document.update({ _id: req.params.id }, {
+					$pull: {
+						starredBy: {user: req.auth.user._id}
+					}
+				});
+			})
+			.then(function() {
+				req.send(200, { message: 'success' });
 			})
 			.catch(
 				HttpError.catch(req)

@@ -9,7 +9,7 @@
   "author": "James Brumond <james@jbrumond.me> (http://www.jbrumond.me)",
   "license": "MIT",
   "dependencies": {
-    "dagger.js": "1.0.31",
+    "dagger.js": "1.0.32",
     "pkg": "0.0.1-1",
     "promise-es6": "^0.1.0",
     "multi-auth": "0.0.4",

@@ -1,5 +1,6 @@
 
-var models = require('dagger.js/lib/models');
+var models  = require('dagger.js/lib/models');
+var when    = require('dagger.js/node_modules/when');
 
 var ObjectId = models.types.ObjectId;
 
@@ -26,3 +27,37 @@ var ActivitySchema = module.exports = new models.Schema({
 		datetime: { type: Date, default: Date.now }
 	}]
 });
+
+// 
+// Get star counts for the given documents
+// 
+// @param {ids} a list of document ids
+// @return promise
+// 
+ActivitySchema.static.countStarsFor = function(ids) {
+	var deferred = when.defer();
+
+	var query = [
+		{$match: {
+			'recentlyStarred.document': (Array.isArray(ids) ? {$in: ids} : ids)
+		}},
+		{$unwind: '$recentlyStarred'},
+		{$match: {
+			'recentlyStarred.document': (Array.isArray(ids) ? {$in: ids} : ids)
+		}},
+		{$group: {
+			_id: '$recentlyStarred.document',
+			count: {$sum: 1}
+		}}
+	];
+
+	this.aggregate(query, function(err, results) {
+		if (err) {
+			return deferred.reject(err);
+		}
+
+		deferred.resolve(results);
+	});
+
+	return deferred.promise;
+};

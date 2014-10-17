@@ -7,8 +7,6 @@ var validate  = require('mongoose-validator');
 
 var ObjectId  = models.types.ObjectId;
 
-models.require('activity');
-
 // 
 // Define the User schema
 // 
@@ -65,7 +63,22 @@ var UserSchema = module.exports = new models.Schema({
 		required: true,
 		enum: [ 'password', 'email', 'twostep-email' ]
 	},
-	activity: { type: ObjectId, ref: 'activity' }
+	// Completely optional public profile
+	profile: {
+		name: {type: String},
+		url: {type: String},
+		location: {type: String}
+	}
+});
+
+// 
+// When a user is deleted, clean up the database, removing all related documents
+// 
+UserSchema.post('remove', function(doc) {
+	Inbox.findByUser(doc._id)
+		.then(function() {
+			// 
+		});
 });
 
 // 

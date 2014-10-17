@@ -8,7 +8,6 @@ var when       = require('dagger.js/node_modules/when');
 var Promise    = require('promise-es6').Promise;
 
 var User      = models.require('user').model;
-var Activity  = models.require('activity').model;
 
 var UsersEndpoint = module.exports = new Endpoint({
 

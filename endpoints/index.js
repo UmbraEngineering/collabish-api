@@ -27,12 +27,27 @@ var IndexEndpoint = module.exports = new Endpoint({
 					}
 				},
 				'/auth': {
-					'post': {
+					'post /token': {
 						description: 'Starts the authentication process',
 						body: {
 							username: 'The username of the user to authenticate',
 							password: 'The password for the account, if one is needed'
 						}
+					},
+					'put|patch /token': {
+						description: 'Refreshes the user token, returning a new one'
+					},
+					'post /twostep': {
+						description: 'Finishes the twostep authentication process',
+						body: {
+							code: 'The confirmation code sent to the user'
+						}
+					},
+					'post /email-confirmation/:userId': {
+						description: 'Starts the email confirmation process'
+					},
+					'put|patch /email-confirmation/:key': {
+						description: 'Finisheds the email confirmation process'
 					}
 				},
 				'/users': {

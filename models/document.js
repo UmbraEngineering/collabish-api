@@ -3,6 +3,7 @@ var validate  = require('mongoose-validator');
 var models    = require('dagger.js/lib/models');
 
 var ObjectId  = models.types.ObjectId;
+var User      = models.require('user').model;
 var Revision  = models.require('revision').model;
 
 
@@ -108,6 +109,19 @@ DocumentSchema.statics.serialize = function(obj) {
 
 	// Replace the list of stars with a count
 	obj.starredBy = (obj.starredBy && obj.starredBy.length) || 0;
+
+	// Serialize the owner/collaborators
+	if (typeof obj.owner === 'object') {
+		obj.owner = User.serialize(obj.owner);
+	}
+	if (Array.isArray(obj.collaborators)) {
+		obj.collaborators = obj.collaborators.map(function(obj) {
+			if (typeof obj === 'object') {
+				return User.serialize(obj);
+			}
+			return obj;
+		});
+	}
 
 	return obj;
 };

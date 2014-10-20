@@ -3,6 +3,7 @@ var pkg        = require('pkg');
 var Endpoint   = require('dagger.js/lib/endpoint');
 var HttpError  = require('dagger.js/lib/http-meta').HttpError;
 var models     = require('dagger.js/lib/models');
+var messaging  = require('../lib/messaging');
 
 var User       = models.require('user').model;
 
@@ -93,6 +94,34 @@ var IndexEndpoint = module.exports = new Endpoint({
 				}
 			}
 		});
+	},
+
+	"post report-issue": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				if (! req.body.subject || ! req.body.description) {
+					throw new HttpError(400, 'Must have a subject and description');
+				}
+
+				return messaging.sendEmail({
+					to: 'james@umbraengineering.com',
+					subject: 'Collabish - Issue Report',
+					template: 'emails/internal/issue-report',
+					data: {
+						subject: req.body.subject,
+						description: req.body.description,
+						user: req.auth.user.toObject()
+					}
+				});
+			})
+			.then(function() {
+				req.respond(200, {
+					message: 'Report sent successfully'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
 	}
 	
 });

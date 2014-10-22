@@ -6,7 +6,7 @@ var conf       = require('dagger.js/lib/conf');
 var when       = require('dagger.js/node_modules/when');
 
 var Document   = models.require('document').model;
-var Revision   = models.require('revision').model;
+var Commit     = models.require('commit').model;
 
 var DocumentsEndpoint = module.exports = new Endpoint({
 
@@ -39,7 +39,7 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 				});
 			})
 			.then(function(docs) {
-				req.respond(200, docs.map(Document.serialize));
+				req.respond(200, docs.map(Document.serialize.bind(Document, req.auth)));
 			})
 			.catch(
 				HttpError.catch(req)
@@ -68,49 +68,7 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 					throw new HttpError(401, 'Not authorized');
 				}
 
-				req.respond(200, Document.serialize(doc));
-			})
-			.catch(
-				HttpError.catch(req)
-			);
-
-	},
-
-	// 
-	// GET /documents/:id/revisions
-	// 
-	"get /:id/revisions": function(req) {
-		var doc;
-		var perms;
-
-		// First, fetch the document so we can be sure it exists and so
-		// we can check permissions
-		Document.findById(req.params.id).exec()
-			.then(function() {
-				if (! doc) {
-					throw new HttpError(404, 'No such document');
-				}
-
-				doc = _doc;
-				perms = doc.permissions(req.auth.user._id);
-
-				return req.auth.allow(req.auth.isAdmin || (req.auth.user && perms));
-			})
-			.then(function() {
-				var query = {
-					document: doc._id
-				};
-
-				// If the only reason the user has permission to the document is
-				// because it is public, than the revision must also be public
-				if (perms === 'public') {
-					query.public = true;
-				}
-
-				return Revision.find(query).exec();
-			})
-			.then(function(revisions) {
-				req.respond(200, revisions.map(Revision.serialize));
+				req.respond(200, Document.serialize(req.auth, doc));
 			})
 			.catch(
 				HttpError.catch(req)
@@ -133,12 +91,242 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 				return Document.create(req.body);
 			})
 			.then(function(doc) {
-				req.respond(201, Document.serialize(doc));
+				req.respond(201, Document.serialize(req.auth, doc));
 			})
 			.catch(
 				HttpError.catch(req)
 			);
 	},
+
+// --------------------------------------------------------
+
+	// 
+	// GET /documents/:id/commits/:commit
+	// 
+	"get /:id/commits/:commit": function(req) {
+		var document;
+		var commit;
+
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return when.all([
+					Document.findById(req.params.id).exec(),
+					Commit.findById(req.params.commit).exec()
+				]);
+			})
+			.then(function(results) {
+				document = results[0];
+				commit = results[1];
+			})
+			.then(function() {
+				if (! document.permissions(req.auth.user)) {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				if (! commit.document.equals(req.params.id)) {
+					throw new HttpError(404, 'Could not find commit "' + req.params.commit +
+						'" for document "' + req.params.id + '"');
+				}
+
+				req.respond(200, Commit.serialize(commit));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// POST /documents/:id/commits
+	// 
+	"post /:id/commits": function(req) {
+		var doc, commit;
+
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				if (req.body.delta) {
+					if (! Array.isArray(req.body.delta)) {
+						throw new HttpError(400, 'Delta must be an array');
+					}
+				}
+
+				else if (req.body.source) {
+					if (req.body.source !== 'draft') {
+						throw new HttpError(400, 'If defined, source must be "draft"');
+					}
+				}
+
+				else {
+					throw new HttpError(400, 'No commit changeset given');
+				}
+
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(_doc) { doc = _doc; })
+			.then(function() {
+				if (doc.permissions(req.auth.user) !== 'owner') {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				if (req.body.delta) {
+					return doc.addCommit(req.body.message, req.body.delta);
+				}
+
+				if (req.body.source === 'draft') {
+					return doc.commitDraft(req.body.message);
+				}
+			})
+			.then(function(commitId) {
+				req.respond(200, {
+					message: 'Committed successfully',
+					commit: commitId
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// DELETE /documents/:id/commits/:commit
+	// 
+	// Deletes all commits *after* the given commit, reverting back to that version
+	// 
+	"delete /:id/commits/:commit": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(_doc) { doc = _doc; })
+			.then(function() {
+				if (doc.permissions(req.auth.user) !== 'owner') {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				return doc.revert(req.body.commit);
+			})
+			.then(function(doc) {
+				req.respond(200, Document.serialize(req.auth, doc));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+// --------------------------------------------------------
+
+	// 
+	// POST /documents/:id/draft
+	// 
+	"post /:id/draft": function(req) {
+		var doc;
+		var delta = req.body.delta;
+
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				if (! Array.isArray(delta)) {
+					throw new HttpError(400, 'Delta must be an array');
+				}
+
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(_doc) { doc = _doc; })
+			.then(function() {
+				if (doc.permissions(req.auth.user) !== 'owner') {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				doc.draft = {
+					created: Date.now(),
+					updated: Date.now(),
+					ops: delta
+				};
+
+				return when.saved(doc);
+			})
+			.then(function() {
+				req.respond(200, {
+					message: 'Draft saved successfully'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// PUT|PATCH /documents/:id/draft
+	// 
+	"put|patch /:id/draft": function(req) {
+		var doc;
+		var delta = req.body.delta;
+
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				if (! Array.isArray(delta)) {
+					throw new HttpError(400, 'Delta must be an array');
+				}
+
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(_doc) { doc = _doc; })
+			.then(function() {
+				if (doc.permissions(req.auth.user) !== 'owner') {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				doc.draft = {
+					created: doc.draft.created || Date.now(),
+					updated: Date.now(),
+					ops: delta
+				};
+
+				return when.saved(doc);
+			})
+			.then(function() {
+				req.respond(200, {
+					message: 'Draft saved successfully'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// DELETE /documents/:id/draft
+	// 
+	"delete /:id/draft": function(req) {
+		var doc;
+
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(_doc) { doc = _doc; })
+			.then(function() {
+				if (doc.permissions(req.auth.user) !== 'owner') {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				doc.draft = {
+					created: null,
+					updated: null,
+					ops: [ ]
+				};
+
+				return when.saved(doc);
+			})
+			.then(function() {
+				req.respond(200, {
+					message: 'success'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+// --------------------------------------------------------
 
 	// 
 	// POST /documents/:id/star
@@ -156,10 +344,10 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 					$push: {
 						starredBy: {user: req.auth.user._id}
 					}
-				});
+				}).exec();
 			})
 			.then(function() {
-				req.send(200, { message: 'success' });
+				req.respond(200, { message: 'success' });
 			})
 			.catch(
 				HttpError.catch(req)
@@ -167,26 +355,28 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 	},
 
 	// 
-	// POST /documents/:id/unstar
+	// DELETE /documents/:id/star
 	// 
 	// Unstars the document as the current user
 	// 
-	"post /:id/unstar": function(req) {
+	"delete /:id/star": function(req) {
 		req.auth.allow(req.auth.user)
 			.then(function() {
 				return Document.update({ _id: req.params.id }, {
 					$pull: {
 						starredBy: {user: req.auth.user._id}
 					}
-				});
+				}).exec();
 			})
 			.then(function() {
-				req.send(200, { message: 'success' });
+				req.respond(200, { message: 'success' });
 			})
 			.catch(
 				HttpError.catch(req)
 			);
 	},
+
+// --------------------------------------------------------
 
 	// 
 	// PUT/PATCH /documents
@@ -226,7 +416,7 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			})
 			.then(
 				function(docs) {
-					req.respond(200, docs.map(Document.serialize));
+					req.respond(200, docs.map(Document.serialize.bind(Document, req.auth)));
 				},
 				HttpError.catch(req)
 			);
@@ -251,7 +441,7 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			})
 			.then(
 				function(doc) {
-					req.respond(200, Document.serialize(doc));
+					req.respond(200, Document.serialize(req.auth, doc));
 				},
 				HttpError.catch(req)
 			);

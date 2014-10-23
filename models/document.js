@@ -1,5 +1,5 @@
 
-var Delta      = require('rich-text').Delta;  
+var Delta      = require('rich-text').Delta;
 var validate   = require('mongoose-validator');
 var models     = require('dagger.js/lib/models');
 var Promise    = require('promise-es6').Promise;
@@ -46,6 +46,7 @@ var DocumentSchema = module.exports = new models.Schema({
 	updated: { type: Date, default: Date.now },
 	collaborators: [{ type: ObjectId, ref: 'user' }],
 	adultContent: { type: Boolean, default: false },
+	allowComments: { type: Boolean, default: true },
 	tags: [{ type: String }],
 	starredBy: [{
 		user: { type: ObjectId, ref: 'user', index: {unique: true} },

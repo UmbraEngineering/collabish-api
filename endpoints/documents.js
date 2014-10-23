@@ -7,6 +7,7 @@ var when       = require('dagger.js/node_modules/when');
 
 var Document   = models.require('document').model;
 var Commit     = models.require('commit').model;
+var Comment    = models.require('comment').model;
 
 var DocumentsEndpoint = module.exports = new Endpoint({
 
@@ -370,6 +371,59 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			})
 			.then(function() {
 				req.respond(200, { message: 'success' });
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+// --------------------------------------------------------
+	
+	// 
+	// GET /documents/:id/comments
+	// 
+	"get /:id/comments": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(doc) {
+				if (! doc.permissions(req.auth.user)) {
+					throw new HttpError(401, 'Not authorized');
+				}
+
+				return Comment.findByQuery(req.query, function(query) {
+					query.where('document').equals(req.params.id);
+				});
+			})
+			.then(function(comments) {
+				req.respond(200, comments.map(Comment.serialize));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// POST /documents/:id/comments
+	// 
+	"post /:id/comments": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return Document.findById(req.params.id).exec();
+			})
+			.then(function(doc) {
+				return req.auth.allow(doc.permissions(req.auth.user) && doc.allowComments);
+			})
+			.then(function() {
+				return Comment.create({
+					author: req.auth.user,
+					content: req.body.content || '',
+					document: req.params.id
+				});
+			})
+			.then(function(comment) {
+				req.respond(201, Comment.serialize(comment));
 			})
 			.catch(
 				HttpError.catch(req)

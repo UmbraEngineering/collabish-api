@@ -41,7 +41,7 @@ CommentSchema.pre('save', function(next) {
 		allowTags: ['b', 'i', 's', 'u', 'a', 'span', 'div'],
 		allowedAttributes: {
 			'div': ['class', 'style', 'id'],
-			'span': ['style'],
+			'span': ['style', 'data-user'],
 			'a': ['href']
 		}
 	});

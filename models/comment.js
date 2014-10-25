@@ -38,7 +38,7 @@ var CommentSchema = module.exports = new models.Schema({
 // 
 CommentSchema.pre('save', function(next) {
 	this.content = sanitizeHtml(this.content, {
-		allowTags: ['b', 'i', 's', 'u', 'a', 'span', 'div'],
+		allowedTags: ['b', 'i', 's', 'u', 'a', 'span', 'div'],
 		allowedAttributes: {
 			'div': ['class', 'style', 'id'],
 			'span': ['style', 'data-user'],

@@ -305,10 +305,9 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			})
 			.then(function(_doc) { doc = _doc; })
 			.then(function() {
-				if (doc.permissions(req.auth.user) !== 'owner') {
-					throw new HttpError(401, 'Not authorized');
-				}
-
+				return req.auth.allow(doc.permissions(req.auth.user) !== 'owner');
+			})
+			.then(function() {
 				doc.draft = {
 					created: null,
 					updated: null,
@@ -424,6 +423,45 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			})
 			.then(function(comment) {
 				req.respond(201, Comment.serialize(comment));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// DELETE /documents/:id/comments/:comment
+	// 
+	"delete /:id/comments/:comment": function(req) {
+		var comment;
+
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				return Comment.findOne({ _id: req.params.comment, document: req.params.id }).exec();
+			})
+			.then(function(_comment) { comment = _comment; })
+			.then(function() {
+				if (! comment) {
+					throw new HttpError(404, 'Not found');
+				}
+
+				return req.auth.allow(req.auth.is(comment.author));
+			})
+			.then(function() {
+				var deferred = when.defer();
+
+				comment.remove(function(err) {
+					if (err) {
+						return deferred.reject(err);
+					}
+
+					deferred.resolve();
+				});
+
+				return deferred.promise;
+			})
+			.then(function() {
+				req.respond(200);
 			})
 			.catch(
 				HttpError.catch(req)

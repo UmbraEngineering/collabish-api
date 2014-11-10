@@ -104,9 +104,37 @@ var IndexEndpoint = module.exports = new Endpoint({
 				}
 
 				return messaging.sendEmail({
-					to: 'james@umbraengineering.com',
+					to: 'feedback@umbraengineering.com',
 					subject: 'Collabish - Issue Report',
 					template: 'emails/internal/issue-report',
+					data: {
+						subject: req.body.subject,
+						description: req.body.description,
+						user: req.auth.user.toObject()
+					}
+				});
+			})
+			.then(function() {
+				req.respond(200, {
+					message: 'Report sent successfully'
+				});
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	"post report-abuse": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				if (! req.body.subject || ! req.body.description) {
+					throw new HttpError(400, 'Must have a subject and description');
+				}
+
+				return messaging.sendEmail({
+					to: 'report@umbraengineering.com',
+					subject: 'Collabish - Abuse Report',
+					template: 'emails/internal/abuse-report',
 					data: {
 						subject: req.body.subject,
 						description: req.body.description,

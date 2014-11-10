@@ -222,7 +222,8 @@ DocumentSchema.methods.permissions = function(user) {
 		user = user.toString();
 	}
 
-	if (this.owner.equals(user)) {
+	var owner = this.owner && this.owner._id;
+	if (owner.equals(user)) {
 		return 'owner';
 	}
 

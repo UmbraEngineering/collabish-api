@@ -3,7 +3,8 @@ var sanitizeHtml  = require('sanitize-html');
 var validate      = require('mongoose-validator');
 var models        = require('dagger.js/lib/models');
 
-var ObjectId = models.types.ObjectId;
+var Mixed     = models.types.Mixed;
+var ObjectId  = models.types.ObjectId;
 
 models.require('user');
 models.require('document');
@@ -18,35 +19,11 @@ models.require('document');
 var CommentSchema = module.exports = new models.Schema({
 	document: { type: ObjectId, ref: 'document' },
 	author: { type: ObjectId, ref: 'user' },
-	content: {
-		type: String,
-		required: true,
-		validate: [
-			validate({
-				validator: 'isLength',
-				arguments: [ 1, 4000 ],
-				message: 'Must be between 1 and 4000 characters in length'
-			})
-		]
-	},
+	content: [{
+		_id: false,
+		insert: { type: String },
+		attributes: { type: Mixed }
+	}],
 	created: { type: Date, default: Date.now },
 	updated: { type: Date, default: Date.now }
-});
-
-// 
-// Make sure comment contents are clean before storing
-// 
-CommentSchema.pre('save', function(next) {
-	this.content = sanitizeHtml(this.content, {
-		allowedTags: ['b', 'i', 's', 'u', 'a', 'span', 'div'],
-		allowedAttributes: {
-			'div': ['class', 'style', 'id'],
-			'span': ['style', 'data-user'],
-			'a': ['href']
-		}
-	});
-
-	this.updated = Date.now();
-
-	next();
 });

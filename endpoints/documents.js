@@ -409,6 +409,10 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 	"post /:id/comments": function(req) {
 		req.auth.allow(req.auth.user)
 			.then(function() {
+				if (! Array.isArray(req.body.content) || ! req.body.content.length) {
+					throw new HttpError(400, 'Comment content must be an array of insert ops');
+				}
+
 				return Document.findById(req.params.id).exec();
 			})
 			.then(function(doc) {
@@ -417,12 +421,47 @@ var DocumentsEndpoint = module.exports = new Endpoint({
 			.then(function() {
 				return Comment.create({
 					author: req.auth.user,
-					content: req.body.content || '',
+					content: req.body.content,
 					document: req.params.id
 				});
 			})
 			.then(function(comment) {
 				req.respond(201, Comment.serialize(comment));
+			})
+			.catch(
+				HttpError.catch(req)
+			);
+	},
+
+	// 
+	// PUT/PATCH /documents/:id/comments/:comment
+	// 
+	"put|patch /:id/comments/:comment": function(req) {
+		req.auth.allow(req.auth.user)
+			.then(function() {
+				if (! Array.isArray(req.body.content) || ! req.body.content.length) {
+					throw new HttpError(400, 'Comment content must be an array of insert ops');
+				}
+
+				return Comment.findOne({ _id: req.params.comment, document: req.params.id }).exec();
+			})
+			.then(function(_comment) { comment = _comment; })
+			.then(function() {
+				if (! comment) {
+					throw new HttpError(404, 'Not found');
+				}
+
+				return req.auth.allow(req.auth.is(comment.author));
+			})
+			.then(function() {
+				comment.set({
+					content: req.body.content
+				});
+
+				return when.saved(comment);
+			})
+			.then(function() {
+				req.respond(200);
 			})
 			.catch(
 				HttpError.catch(req)

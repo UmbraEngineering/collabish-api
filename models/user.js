@@ -63,6 +63,7 @@ var UserSchema = module.exports = new models.Schema({
 		required: true,
 		enum: [ 'password', 'email', 'twostep-email' ]
 	},
+	lang: { type: String, default: 'en-us' },
 	// Completely optional public profile
 	profile: {
 		name: {type: String},
